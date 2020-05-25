@@ -4,6 +4,7 @@ Client for accessing Stanford CoreNLP in Python
 
 import atexit
 import contextlib
+import enum
 import io
 import os
 import re
@@ -88,6 +89,11 @@ class PermanentlyFailedException(Exception):
     """ Exception raised if the service should NOT retry the request. """
     pass
 
+class StartServer(enum.Enum):
+    DONT_START = 0
+    FORCE_START = 1
+    TRY_STARTING = 2
+
 
 def clean_props_file(props_file):
     # check if there is a temp server props file to remove and remove it
@@ -127,13 +133,11 @@ class RobustService(object):
     def start(self):
         if self.start_cmd:
             if self.host and self.port:
-                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-                    try:
-                        sock.bind((self.host, self.port))
-                    except socket.error:
-                        if self.ignore_binding_error:
-                            logger.warn(f"Ignoring binding error to port {self.port}.")
-                        else:
+                if not self.ignore_binding_error:
+                    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                        try:
+                            sock.bind((self.host, self.port))
+                        except socket.error:
                             raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d (possibly something is already running there)" % self.port)
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
@@ -225,7 +229,7 @@ class CoreNLPClient(RobustService):
     PIPELINE_LANGUAGES = \
         ['ar', 'arabic', 'chinese', 'zh', 'english', 'en', 'french', 'fr', 'de', 'german', 'es', 'spanish']
 
-    def __init__(self, start_server=True,
+    def __init__(self, start_server=StartServer.FORCE_START,
                  endpoint=DEFAULT_ENDPOINT,
                  timeout=DEFAULT_TIMEOUT,
                  threads=DEFAULT_THREADS,
@@ -245,7 +249,7 @@ class CoreNLPClient(RobustService):
         self.properties_cache = {}
         self.server_props_file = {'is_temp': False, 'path': None}
         # start the server
-        if start_server or start_server is None:
+        if start_server == StartServer.FORCE_START or start_server == StartServer.TRY_STARTING:
             # set up default properties for server
             self._setup_default_server_props(properties, annotators, output_format)
             # at this point self.server_start_info and self.server_props_file should be set
@@ -297,7 +301,7 @@ class CoreNLPClient(RobustService):
             self.output_format = output_format
 
         super(CoreNLPClient, self).__init__(start_cmd, stop_cmd, endpoint,
-                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server is None))
+                                            stdout, stderr, be_quiet, host=host, port=port, ignore_binding_error=(start_server == StartServer.TRY_STARTING))
 
         self.timeout = timeout
 
