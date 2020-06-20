@@ -82,3 +82,15 @@ the original CNN classifier paper.
 The Chinese model is trained using the polarity signal from the following 
 
 http://a1-www.is.tokushima-u.ac.jp/member/ren/Ren-CECps1.0/Ren-CECps1.0.html
+
+We were unable to find standard scores or even standard splits for this dataset.
+
+### German
+
+The German model is build from [sb10k](https://www.spinningbytes.com/resources/germansentiment/).
+
+In addition, the model is trained with the longer snippets of text
+from [Usage](https://www.romanklinger.de/usagecorpus/) and
+[Scare](https://www.romanklinger.de/scare/)
+
+The original sb10k paper cited an F1 score of 65.09.
