@@ -4,8 +4,12 @@ Parses the xml conversion of orchid
 https://github.com/korakot/thainlp/blob/master/xmlchid.xml
 """
 
+import os
 import sys
 import xml.etree.ElementTree as ET
+
+input_filename = sys.argv[1]
+output_dir = sys.argv[2]
 
 # line "122819" has some error in the tokenization of the musical notation
 # line "209380" is also messed up
@@ -65,8 +69,7 @@ allowed_sequences = {
     '<----',
 }
 
-filename = sys.argv[1]
-tree = ET.parse(filename)
+tree = ET.parse(input_filename)
 
 # we will put each paragraph in a separate block in the output file
 # we won't pay any attention to the document boundaries unless we
@@ -101,5 +104,28 @@ for document in root:
             sentences.append(words)
         paragraphs.append(sentences)
 
-print(paragraphs[0])
+
+# TODO: no MWT in this dataset?
+with open(os.path.join(output_dir, 'th_orchid-ud-train-mwt.json'), 'w') as fout:
+    fout.write("[]\n")
+
+text_out = open(os.path.join(output_dir, 'th_orchid.train.txt'), 'w')
+label_out = open(os.path.join(output_dir, 'th_orchid-ud-train.toklabels'), 'w')
+for paragraph in paragraphs:
+    for sentence in paragraph:
+        for word_idx, word in enumerate(sentence):
+            # TODO: split with newlines to make it more readable?
+            text_out.write(word)
+            for i in range(len(word) - 1):
+                label_out.write("0")
+            if word_idx == len(sentence) - 1:
+                label_out.write("2")
+            else:
+                label_out.write("1")
+
+    text_out.write("\n\n")
+    label_out.write("\n\n")
+
+text_out.close()
+label_out.close()
 
